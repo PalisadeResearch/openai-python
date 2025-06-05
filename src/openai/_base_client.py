@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import sys
 import json
 import time
@@ -768,6 +769,12 @@ class BaseClient(Generic[_HttpxClientT, _DefaultStreamT]):
         if response.status_code >= 500:
             log.debug("Retrying due to status code %i", response.status_code)
             return True
+
+        # Retry transient /v1/engines/*/completions 404 bug
+        if response.status_code == 404:
+            if re.search(r'Invalid URL \(POST /v1/engines/[\w-]+/completions\)', response.text):
+                log.debug("Retrying due to transient 404 bug")
+                return True
 
         log.debug("Not retrying")
         return False
